@@ -1,0 +1,58 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*- 
+'''
+Authr: João Juíz
+'''
+import os,sys,inspect
+cmd_subfolder = os.path.realpath(os.path.abspath(os.path.join(os.path.split(inspect.getfile( inspect.currentframe() ))[0],"share")))
+if cmd_subfolder not in sys.path:
+     sys.path.insert(0, cmd_subfolder)
+
+import argparse
+from configFile import ConfigFile
+from framework import FileOperations
+from urlparse import urlparse
+import subprocess
+
+class Main(object):
+    def argparser(self):
+        parser = argparse.ArgumentParser(description='Download a file and save it to ./destination/hostname/filename')
+        parser.add_argument("url", type=str, help='Address to fetch media from')
+        #parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here')
+        self.args = parser.parse_args()
+        
+    def configparser(self):
+        defaults={"destination":"~/simpledl"}
+        config=ConfigFile("~/.simpledl",defaults)
+        self.path=os.path.expanduser(config.get('destination'))
+
+    def __init__(self):
+        self.argparser()
+        self.url=self.args.url
+        self.configparser()
+        
+    def _parseUrl(self):
+        urlparsed=urlparse(self.url)
+        self.hostname=urlparsed.netloc
+        self.basename=os.path.basename(urlparsed.path)
+        self.destination=os.path.join(self.path,self.hostname,self.basename)
+    
+    def _mkdirs(self):
+        FileOperations.mkdirq(self.path)
+        FileOperations.mkdirq(os.path.join(self.path,self.hostname))
+
+    def _writeLog(self):
+        filename=os.path.join(self.path,self.hostname,"source")
+        with open(filename,"a+") as f:
+            f.write(self.url+"\n")
+
+    def __call__(self):
+        self._parseUrl()
+        self._mkdirs()
+        self._writeLog()
+        subprocess.check_call(["/usr/bin/wget","--user-agent=Mozilla 5.0","-O",self.destination,self.url])
+
+        
+if __name__ == "__main__":
+    Main()()
+
