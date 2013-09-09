@@ -4,7 +4,7 @@
 Authr: João Juíz
 '''
 from webFunctions import _Web
-import re
+import re,os
 from urlparse import urljoin
 from siteSpecific import MotherlessSpecific as Website
 from framework import FileOperations, FW
@@ -26,8 +26,8 @@ class Main(object):
     def __call__(self):
         self.argparser()
         f=Favs(self.args.username)
-        for item in f:
-            m=Medium(item)
+        mediumlist=[Medium(x) for x in f]
+        for m in mediumlist:
             if (not m.existsAtDestination(self.args.destination)):
                 m()
                 m.download(self.args.destination)
@@ -35,6 +35,18 @@ class Main(object):
                 FW.error("Recreate Symlink")
                 m()
                 m.createSymlink(self.args.destination)
+        self._printDiffs(mediumlist)
+        
+    def _printDiffs(self,mediumlist):
+        localDir=os.path.join(self.args.destination,"by-id")
+        server=set([x.id for x in mediumlist])
+        local=set([f for f in os.listdir(localDir) if os.path.isfile(os.path.join(localDir,f)) ])
+        diff=local.difference(server)
+        if len(diff) == 0: return
+        FW.error("")
+        FW.error("###################################################")
+        FW.error("These files only exist on your computer but not on the server")
+        for x in diff: print x
         
 class PageLoader(_Web):
     """

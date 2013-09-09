@@ -50,7 +50,8 @@ class Main(object):
         self._parseUrl()
         self._mkdirs()
         self._writeLog()
-        subprocess.check_call(["/usr/bin/wget","--user-agent=Mozilla 5.0","-O",self.destination,self.url])
+        subprocess.check_call(["/usr/bin/wget","-O",self.destination,self.url])
+        #subprocess.check_call(["/usr/bin/wget","--user-agent=Mozilla 5.0","-O",self.destination,self.url])
 
         
 if __name__ == "__main__":
