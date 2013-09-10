@@ -34,6 +34,8 @@ class Medium(_Web,FileOperations):
         
     def __call__(self):
         soup=Bsoup(self.get(self.websiteUrl))
+        self.isLeaf = Website.isLeaf(soup)
+        if not self.isLeaf: return
         self.isPhoto = Website.isPhoto(soup)
         if self.isPhoto: self.mediaUrl = Website.getPicUrl(soup)
         else: self.mediaUrl = Website.getVideoUrl(soup)

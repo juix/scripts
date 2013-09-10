@@ -43,6 +43,14 @@ class MotherlessSpecific(object):
     #    href=self._getA(soup).href
     #    if "?full" in href: return href
     #    else return None
+    
+    @staticmethod
+    def isLeaf(soup):
+        """
+        @return True, if this is an item. Otherwise this is a gallery
+        """
+        div=soup.findAll(id='media-media')
+        return (len(div)>0)
 
     @staticmethod
     def getPicUrl(soup):
