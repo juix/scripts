@@ -37,6 +37,7 @@ class Main(object):
         
     def _download(self,url):
         m=Medium(url)
+        if m.existsAtDestination(self.args.destination): return
         try:
             m()
         except urllib2.HTTPError as e: 
