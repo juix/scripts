@@ -47,7 +47,8 @@ class Main(object):
         if m.isLeaf == False: return
         
         if self.args.images_only == False or m.isPhoto:
-            m.download(self.args.destination)
+            if not m.existsAtDestination(self.args.destination): m.download(self.args.destination)
+            else: m.saveHtmlFile(self.args.destination)
             print url
 
         

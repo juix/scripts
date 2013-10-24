@@ -35,6 +35,9 @@ class Main(object):
                 FW.error("Recreate Symlink")
                 m()
                 m.createSymlink(self.args.destination)
+            #else:
+            #    m()
+            #    m.saveHtmlFile(self.args.destination)
         self._printDiffs(mediumlist)
         
     def _printDiffs(self,mediumlist):
@@ -45,7 +48,7 @@ class Main(object):
         if len(diff) == 0: return
         FW.error("")
         FW.error("###################################################")
-        FW.error("These files only exist on your computer but not on the server")
+        FW.error("Filenames which exist on your computer but not in your motherless favourites are printed to stdout.")
         for x in diff: print x
         
 class PageLoader(_Web):

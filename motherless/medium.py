@@ -33,7 +33,8 @@ class Medium(_Web,FileOperations):
         return os.path.exists(os.path.join(dest,"by-id",self.id))
         
     def __call__(self):
-        soup=Bsoup(self.get(self.websiteUrl))
+        self.websiteContent = self.get(self.websiteUrl)
+        soup=Bsoup(self.websiteContent)
         self.isLeaf = Website.isLeaf(soup)
         if not self.isLeaf: return
         self.isPhoto = Website.isPhoto(soup)
@@ -60,6 +61,12 @@ class Medium(_Web,FileOperations):
             #ydl = YoutubeDL({'out})
             #ydl.download([self.websiteUrl])
         self.createSymlink(destination)
+        self.saveHtmlFile(destination)
+        
+    def saveHtmlFile(self,destination):
+        self.mkdirq(os.path.join(destination,"html"))
+        with open(os.path.join(destination,"html",self.id),"w") as f:
+            f.write(self.websiteContent)
         
     def createSymlink(self,destination):
         self.mkdirq(os.path.join(destination,"by-name"))
