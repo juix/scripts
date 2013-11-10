@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*- 
 '''
 Authr: João Juíz
+
+Literature:
+    http://ceriksen.com/2012/07/26/firefox-sessionstore-js-and-privacy/. 26/10/2013
 '''
 from medium import Medium
 import argparse,json,os,sys,urllib2
@@ -12,44 +15,81 @@ class Main(object):
         parser.add_argument("path", type=str, help='Path to ~/.mozilla/firefox/something/')
         parser.add_argument("-i", "--images-only", dest="images_only", action="store_true", default=False, help="Don't download videos")
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here')
+        parser.add_argument("-s",'--sessionstore', action="store_true", default=False, help='Remove existing media from sessionstore and quit')
         self.args = parser.parse_args()
 
     def __init__(self):
         pass
         
+    def _log(self,text):
+        #print text
+        pass
+        
     def __call__(self):
         self.argparser()
-        self._getLinks()
-        print >> sys.stderr, len(self.urls)," Links"
-        for url in self.urls: self._download(url)
+        self._getLinks(self.args.sessionstore)
+        #print >> sys.stderr, len(self.urls)," Links"
+        #for url in self.urls: self._download(url)
         
-    def _getLinks(self):
-        with open( os.path.join(self.args.path,"sessionstore.js") ) as f:
+    def isValidUrl(self,url):
+        return "motherless.com" in url and "/search" not in url \
+                        and "/g/" not in url and "/gv/" not in url \
+                        and "page=" not in url and "/term/" not in url \
+                        and "/gi/" not in url and "/m/" not in url \
+                        and "/f/" not in url and "/videos/" not in url
+    def _getLinks(self,onlySessionstore=False):
+        """
+        @onlySessionstore Dont download anything, only remove existing media from sessionstore
+        """
+        sessionstore=os.path.join(self.args.path,"sessionstore.js")
+        with open( sessionstore ) as f:
             sstore=json.load(f)
         #urls=[ entry["url"] for entry in tab["entries"] for tab in window["tabs"] for window in sstore["windows"] ]
-        urls=[]
+        #urls=[]
         for window in sstore["windows"]: 
+            deleteItems=[]
             for tab in window["tabs"]: 
-                for entry in tab["entries"]: 
-                    if "motherless.com" in entry["url"]:
-                        urls.append(entry["url"])
-        self.urls=urls
+                    entry=tab["entries"][-1]
+                    #if "scroll" not in entry: continue
+                    url=entry["url"]
+                    self._log(url)
+                    if self.isValidUrl(url):
+                        self._log("\tis valid motherless url")
+                        m=Medium(url)
+                        if m.existsAtDestination(self.args.destination) or (onlySessionstore == False and self._download(m)):
+                        #if Medium(url).existsAtDestination(self.args.destination):
+                            print "Remove from sessionstore:",url
+                            deleteItems.append(tab)
+            self._log("delete tabs")
+            for tab in deleteItems:
+                window["tabs"].remove(tab)
+        #self.urls=urls
+        self._log("write sessionstore")
+        with open(sessionstore, 'w') as outfile:
+            json.dump(sstore, outfile)
         
-    def _download(self,url):
-        m=Medium(url)
-        if m.existsAtDestination(self.args.destination): return
+    def _download(self,m):
+        """
+        @m      Instance of Medium = Medium("http://...")
+        @return True if this url is a media item (leaf) that has/had been downloaded
+        """
+        #m=Medium(url)
+        #if m.existsAtDestination(self.args.destination): return True
         try:
+            self._log("\tload medium")
             m()
         except urllib2.HTTPError as e: 
-            print url
+            print m.websiteUrl
             print >> sys.stderr, e
-            return
-        if m.isLeaf == False: return
+            return False
+        if m.isLeaf == False: return False
         
         if self.args.images_only == False or m.isPhoto:
-            if not m.existsAtDestination(self.args.destination): m.download(self.args.destination)
-            else: m.saveHtmlFile(self.args.destination)
-            print url
+            m.download(self.args.destination)
+            #m.saveHtmlFile(self.args.destination)
+            print m.websiteUrl
+            return True
+        return False
 
         
 if __name__ == "__main__":

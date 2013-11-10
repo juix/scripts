@@ -8,6 +8,10 @@ import re
 class WebsiteChangedError(Exception): pass
 
 class MotherlessSpecific(object):
+    @staticmethod
+    def getNumFaved(html):
+        return int(re.findall("Favorited\D*(\d*)",html, re.S)[0]) #+re.I
+
     @classmethod
     def getVideoUrl(self,soup):
         div=self._getDiv(soup)

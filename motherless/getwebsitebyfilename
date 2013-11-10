@@ -1,0 +1,9 @@
+#!/bin/bash
+# usage: $0 ~/motherless-saves/by-name/something
+# output: http://motherless.com/origin
+
+file="$1"
+#cd "`dirname "$file"`"
+id="$(basename "`readlink -m "$file"`")"
+echo "http://motherless.com/$id"
+

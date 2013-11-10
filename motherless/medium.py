@@ -8,7 +8,7 @@ from siteSpecific import MotherlessSpecific as Website
 from framework import FileOperations
 from BeautifulSoup import BeautifulSoup as Bsoup
 from urlparse import urlparse
-import urllib,os
+import urllib,os,re
 from youtube_dl import YoutubeDL
 import subprocess
 
@@ -42,6 +42,7 @@ class Medium(_Web,FileOperations):
         else: self.mediaUrl = Website.getVideoUrl(soup)
         self.title=Website.getName(soup)
         self._setFilename()
+        self.numFaved=Website.getNumFaved(self.websiteContent)
         
     def _setFilename(self):
         filename="%s - %s%s"%(self.title,self.id,self.getExtension(self.mediaUrl))
@@ -70,11 +71,11 @@ class Medium(_Web,FileOperations):
         
     def createSymlink(self,destination):
         self.mkdirq(os.path.join(destination,"by-name"))
-        #self.mkdirq(os.path.join(destination,"by-id-and-name"))
+        self.mkdirq(os.path.join(destination,"by-rating"))
         try:
             os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-name",self.filename))
         except OSError: pass
-        #try:
-        #    os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-id-and-name",self.id+" "+self.filename))
-        #except OSError: pass
+        try:
+            os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-rating","%04d %s"%(self.numFaved,self.filename)))
+        except OSError: pass
 
