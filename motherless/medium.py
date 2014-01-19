@@ -5,14 +5,14 @@ Authr: João Juíz
 '''
 from webFunctions import _Web
 from siteSpecific import MotherlessSpecific as Website
-from framework import FileOperations
+from framework import FileOperations,FW
 from BeautifulSoup import BeautifulSoup as Bsoup
 from urlparse import urlparse
 import urllib,os,re
-from youtube_dl import YoutubeDL
 import subprocess
+from database import Database
 
-class Medium(_Web,FileOperations):
+class MediumNoDB(_Web,FileOperations):
     """
     A favourised item.
     """
@@ -32,7 +32,12 @@ class Medium(_Web,FileOperations):
     def existsAtDestination(self,dest):
         return os.path.exists(os.path.join(dest,"by-id",self.id))
         
-    def __call__(self):
+    def _retrieveProperties(self):
+        """
+        Load website content and set title, filename, etc.
+        """
+        self._retrieveProperties=lambda:None
+
         self.websiteContent = self.get(self.websiteUrl)
         soup=Bsoup(self.websiteContent)
         self.isLeaf = Website.isLeaf(soup)
@@ -49,27 +54,39 @@ class Medium(_Web,FileOperations):
         #name=self.title#+self.getExtension(self.mediaUrl)
         self.filename=self.safeFilename(filename)
         
+    def downloadFinished(self):
+        raise Exception("Not Implemented, use existsAtDestination()")
+        
+    def isBeingDownloaded(self):
+        return False
+        
     def download(self,destination):
+        # Kritischer Abschnitt Start, FIXME Parallelisierung
+        self._retrieveProperties()
         self.mkdirq(os.path.join(destination,"by-id"))
         if self.isPhoto:
             urllib.urlretrieve(self.mediaUrl, os.path.join(destination,"by-id",self.id))
         else:
             # is video
             print "\tvideo:", self.mediaUrl
-            subprocess.check_call(["/usr/bin/wget","--user-agent=Mozilla 5.0","-O",os.path.join(destination,"by-id",self.id),self.mediaUrl])
+            subprocess.check_call(["/usr/bin/wget","-c","--user-agent=Mozilla 5.0","-O",os.path.join(destination,"by-id",self.id),self.mediaUrl])
+            # returncode == 0. download completed successfully
             #urllib.urlretrieve(self.mediaUrl, os.path.join(destination,"by-id",self.id))
             
             #ydl = YoutubeDL({'out})
             #ydl.download([self.websiteUrl])
         self.createSymlink(destination)
         self.saveHtmlFile(destination)
+        # Kritischer Abschnitt Ende
         
     def saveHtmlFile(self,destination):
+        self._retrieveProperties()
         self.mkdirq(os.path.join(destination,"html"))
         with open(os.path.join(destination,"html",self.id),"w") as f:
             f.write(self.websiteContent)
         
     def createSymlink(self,destination):
+        self._retrieveProperties()
         self.mkdirq(os.path.join(destination,"by-name"))
         self.mkdirq(os.path.join(destination,"by-rating"))
         try:
@@ -78,4 +95,30 @@ class Medium(_Web,FileOperations):
         try:
             os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-rating","%04d %s"%(self.numFaved,self.filename)))
         except OSError: pass
+
+
+
+class Medium(MediumNoDB):
+    """
+    Use this to enable parallel use and skip downloaded files.
+    Do Database.load() before initialising this.
+    """
+    def __init__(self,websiteUrl):
+        super(Medium,self).__init__(websiteUrl)
+
+    def download(self,dest):
+        if self.downloadFinished() or Database.isDownloading(self.id): 
+            FW.error("%s already downloaded."%self.id)
+            return
+        Database.notify_startDownload(self.id)
+        super(Medium,self).download(dest)
+        Database.notify_finishedDownload(self.id)
+
+    def downloadFinished(self):
+        return Database.hasId(self.id)
+        
+    def isBeingDownloaded(self):
+        return Database.isDownloading(self.id)
+
+        
 

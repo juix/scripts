@@ -7,6 +7,7 @@ Literature:
     http://ceriksen.com/2012/07/26/firefox-sessionstore-js-and-privacy/. 26/10/2013
 '''
 from medium import Medium
+from database import Database
 import argparse,json,os,sys,urllib2,subprocess
 
 class Main(object):
@@ -38,7 +39,9 @@ class Main(object):
         if self.args.sessionstore and self.firefoxIsOpen() \
             and raw_input("Browser must be closed first. Continue anyway? [y/N]") != "y":
             exit(1)
+        Database.load(self.args.destination)
         self._getLinks(firefoxPath,self.args.sessionstore)
+        Database.close()
         #print >> sys.stderr, len(self.urls)," Links"
         #for url in self.urls: self._download(url)
         
@@ -74,10 +77,10 @@ class Main(object):
                     if self.isValidUrl(url):
                         self._log("\tis valid motherless url")
                         m=Medium(url)
-                        existsLocally=m.existsAtDestination(self.args.destination)
-                        if onlySessionstore == False and not existsLocally:
+                        if onlySessionstore == False and (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
                             self._download(m)
-                        if onlySessionstore and existsLocally:
+                            Database.putUrl(url)
+                        if onlySessionstore and m.downloadFinished():
                             print "Remove from sessionstore:",url
                             deleteItems.append(tab)
             self._log("delete tabs")
@@ -98,7 +101,7 @@ class Main(object):
         #if m.existsAtDestination(self.args.destination): return True
         try:
             self._log("\tload medium")
-            m()
+            m._retrieveProperties()
         except urllib2.HTTPError as e: 
             print m.websiteUrl
             print >> sys.stderr, e

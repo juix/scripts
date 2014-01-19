@@ -10,6 +10,7 @@ from siteSpecific import MotherlessSpecific as Website
 from framework import FileOperations, FW
 import argparse
 from medium import Medium
+from database import Database
 
 class Main(object):
     def __init__(self):
@@ -25,20 +26,19 @@ class Main(object):
         
     def __call__(self):
         self.argparser()
+        Database.load(self.args.destination)
         f=Favs(self.args.username)
         mediumlist=[Medium(x) for x in f]
         for m in mediumlist:
-            if (not m.existsAtDestination(self.args.destination)):
-                m()
-                m.download(self.args.destination)
-            elif self.args.links:
+            m.download(self.args.destination)
+            if m.existsAtDestination(self.args.destination) and self.args.links:
                 FW.error("Recreate Symlink")
-                m()
                 m.createSymlink(self.args.destination)
             #else:
             #    m()
             #    m.saveHtmlFile(self.args.destination)
         self._printDiffs(mediumlist)
+        Database.close()
         
     def _printDiffs(self,mediumlist):
         localDir=os.path.join(self.args.destination,"by-id")

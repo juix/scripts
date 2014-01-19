@@ -8,6 +8,7 @@ Authr: João Juíz
 #from urlparse import urljoin
 import argparse
 from medium import Medium
+from database import Database
 
 class Main(object):
     def __init__(self):
@@ -21,9 +22,10 @@ class Main(object):
         
     def __call__(self):
         self.argparser()
+        Database.load(self.args.destination)
         m=Medium(self.args.url)
-        m()
         m.download(self.args.destination)
+        Database.close()
 
 if __name__ == "__main__":
     Main()()
