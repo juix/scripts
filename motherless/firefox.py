@@ -10,7 +10,13 @@ from medium import Medium
 from database import Database
 import argparse,json,os,sys,urllib2,subprocess
 
-class Main(object):
+class Loggable(object):
+    def _log(self,text):
+        #print text
+        pass
+        
+
+class Main(Loggable):
     def argparser(self):
         parser = argparse.ArgumentParser(description="Downloads motherless media from Iceweasel's/Firefox' open tabs. URLs of downloaded motherless.com items are printed to stdout.")
         parser.add_argument("-p", "--path", type=str, help='Path to ~/.mozilla/firefox/something/. First match of sessionstore.js if not specified.')
@@ -20,10 +26,6 @@ class Main(object):
         self.args = parser.parse_args()
 
     def __init__(self):
-        pass
-        
-    def _log(self,text):
-        #print text
         pass
         
     def firefoxIsOpen(self):
@@ -40,7 +42,19 @@ class Main(object):
             and raw_input("Browser must be closed first. Continue anyway? [y/N]") != "y":
             exit(1)
         Database.load(self.args.destination)
-        self._getLinks(firefoxPath,self.args.sessionstore)
+        sstore=Sessionstore(firefoxPath)
+        if self.args.sessionstore:
+            sstore.filterStorage(lambda url:self.isValidUrl(url) and Medium(url).downloadFinished())
+            sstore.save()
+        else:
+            urls=sstore.getUrls()
+            for url in set(urls):
+                    if self.isValidUrl(url):
+                        self._log("\tis valid motherless url")
+                        m=Medium(url)
+                        if (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
+                            self._downloadThread(m)
+                                     
         Database.close()
         #print >> sys.stderr, len(self.urls)," Links"
         #for url in self.urls: self._download(url)
@@ -58,39 +72,11 @@ class Main(object):
                         and "page=" not in url and "/term/" not in url \
                         and "/gi/" not in url and "/m/" not in url \
                         and "/f/" not in url and "/videos/" not in url)
-    def _getLinks(self,firefoxPath,onlySessionstore=False):
-        """
-        @onlySessionstore Dont download anything, only remove existing media from sessionstore
-        """
-        sessionstore=os.path.join(firefoxPath,"sessionstore.js")
-        with open( sessionstore ) as f:
-            sstore=json.load(f)
-        #urls=[ entry["url"] for entry in tab["entries"] for tab in window["tabs"] for window in sstore["windows"] ]
-        #urls=[]
-        for window in sstore["windows"]: 
-            deleteItems=[]
-            for tab in window["tabs"]: 
-                    entry=tab["entries"][-1]
-                    #if "scroll" not in entry: continue
-                    url=entry["url"]
-                    self._log(url)
-                    if self.isValidUrl(url):
-                        self._log("\tis valid motherless url")
-                        m=Medium(url)
-                        if onlySessionstore == False and (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
-                            self._download(m)
-                            Database.putUrl(url)
-                        if onlySessionstore and m.downloadFinished():
-                            print "Remove from sessionstore:",url
-                            deleteItems.append(tab)
-            self._log("delete tabs")
-            for tab in deleteItems:
-                window["tabs"].remove(tab)
-        #self.urls=urls
-        if onlySessionstore:
-            self._log("write sessionstore")
-            with open(sessionstore, 'w') as outfile:
-                json.dump(sstore, outfile)
+
+        
+    def _downloadThread(self,m):
+        self._download(m)
+        Database.putUrl(m.websiteUrl)
         
     def _download(self,m):
         """
@@ -115,6 +101,49 @@ class Main(object):
             return True
         return False
 
+class Sessionstore(Loggable):
+    def __init__(self,firefoxPath):
+        self.firefoxPath=firefoxPath
+        self.sstorePath=os.path.join(firefoxPath,"sessionstore.js")
+        
+    def getUrls(self):
+        self._load()
+        self.getUrls = lambda:self.urls
+        return self.urls
+        
+    def filterStorage(self,filterfunction):
+        self._load(filterfunction)
+    
+    def _load(self,filterfunction=lambda url:False):
+        """
+        @filterfunction(url) Url is removed if return value is True
+        @return [urls]
+        """
+        with open( self.sstorePath ) as f:
+            sstore=json.load(f)
+        #urls=[ entry["url"] for entry in tab["entries"] for tab in window["tabs"] for window in sstore["windows"] ]
+        urls=[]
+        for window in sstore["windows"]: 
+            deleteItems=[]
+            for tab in window["tabs"]: 
+                    entry=tab["entries"][-1]
+                    #if "scroll" not in entry: continue
+                    url=entry["url"]
+                    self._log(url)
+                    if filterfunction(url):
+                            print "Remove from sessionstore:",url
+                            deleteItems.append(tab)
+                    else: urls.append(url)
+            self._log("delete tabs")
+            for tab in deleteItems:
+                window["tabs"].remove(tab)
+        self.urls=urls
+        self.content=sstore
+
+    def save(self):
+            self._log("write sessionstore")
+            with open(self.sstorePath, 'w') as outfile:
+                json.dump(self.content, outfile)
         
 if __name__ == "__main__":
     Main()()
