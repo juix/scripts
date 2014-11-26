@@ -15,7 +15,7 @@ class MotherlessSpecific(object):
     @classmethod
     def getVideoUrl(self,soup):
         div=self._getDiv(soup)
-        r=re.findall("(http\:([^ \n\r\t\"']*)\.flv)",div.getText())
+        r=re.findall("(http\:([^ \n\r\t\"']*)\.(mp4|flv))",div.getText())
         if len(r)==0:
             raise WebsiteChangedError("No video found.")
         return r[0][0]

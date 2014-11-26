@@ -21,7 +21,7 @@ class Main(object):
         existing=set(os.listdir(os.path.join(self.args.destination,"by-id")))
         trash=existing.difference(referenced)
         size=0
-        for x in trash: size+=os.path.getsize(os.path.join("by-id",x))
+        for x in trash: size+=os.path.getsize(os.path.join(self.args.destination,"by-id",x))
         print >> sys.stderr, size/1024/1024, "MB"
         print >> sys.stderr, len(trash), "files"
         print "\n".join(trash)
@@ -32,6 +32,7 @@ class Main(object):
         #print "E39A8FE" in trash
         
     def _loadReferenced(self):
+	    TODO: alle links laden, nicht nur in der Verzeichnistiefe 1
         r=set()
         for element in os.listdir(self.args.destination):
             if not element.startswith("by-name"): continue

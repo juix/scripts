@@ -5,7 +5,7 @@ echo >&2
 
 for file in *; do
     id="`basename "$file"`"
-    if wget --spider "http://motherless.com/$id" >>/dev/null 2>&1; then
+    if wget --spider "http://motherless.com/$id" >>/dev/null 2>&1; then # FIXME: handle $?
         true
     else
         echo $file

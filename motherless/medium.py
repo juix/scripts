@@ -55,7 +55,7 @@ class MediumNoDB(_Web,FileOperations):
     def _setFilename(self):
         filename="%s - %s%s"%(self.title,self.id,self.getExtension(self.mediaUrl))
         #name=self.title#+self.getExtension(self.mediaUrl)
-        self.filename=self.safeFilename(filename)
+        self.filename=self.safeFilename(filename,175)
         
     def downloadFinished(self):
         raise Exception("Not Implemented, use existsAtDestination(path)")
@@ -94,8 +94,10 @@ class MediumNoDB(_Web,FileOperations):
         self._retrieveProperties()
         self.mkdirq(os.path.join(destination,"by-name"))
         #self.mkdirq(os.path.join(destination,"sorted.by-rating"))
+        idPath="../by-id/"
+        idPath=os.path.abspath(os.path.join(destination,"by-id")) # absolute filepath links
         try:
-            os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-name",self.filename))
+            os.symlink(os.path.join(idPath,self.id), os.path.join(destination,"by-name",self.filename))
         except OSError: pass
         try:
             pass
