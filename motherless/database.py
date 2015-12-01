@@ -67,7 +67,8 @@ class Database(object):
         self.conn.commit()
 
     @classmethod
-    def isDownloading(self,s):
+    def isDownloading(self,s):  # FIXME: prohibit two processes from entering the critical section at the same time! e.g. using lockfile
+        return False
         pidQuest=self.c.execute("SELECT pid FROM activeDownloads WHERE id=?",(s,)).fetchone()
         if pidQuest == None: return False
         pid=pidQuest[0]

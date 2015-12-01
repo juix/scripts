@@ -53,7 +53,7 @@ class MediumNoDB(_Web,FileOperations):
         self.numFaved=Website.getNumFaved(self.websiteContent)
         
     def _setFilename(self):
-        filename="%s - %s%s"%(self.title,self.id,self.getExtension(self.mediaUrl))
+        filename="%s - %s%s"%(self.title,self.id,self.getExtension(urlparse(self.mediaUrl).path))
         #name=self.title#+self.getExtension(self.mediaUrl)
         self.filename=self.safeFilename(filename,175)
         
@@ -114,8 +114,8 @@ class Medium(MediumNoDB):
     def __init__(self,websiteUrl):
         super(Medium,self).__init__(websiteUrl)
 
-    def download(self,dest):
-        if self.downloadFinished() or Database.isDownloading(self.id): 
+    def download(self, dest, force=False):
+        if (not force) and (self.downloadFinished() or Database.isDownloading(self.id)): 
             FW.error("%s already downloaded."%self.id)
             return
         Database.notify_startDownload(self.id)

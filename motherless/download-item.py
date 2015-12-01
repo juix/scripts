@@ -18,13 +18,15 @@ class Main(object):
         parser = argparse.ArgumentParser(description='Download an item from motherless.com')
         parser.add_argument("url", type=str, help='Address to fetch media from')
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here')
+        parser.add_argument("-f",'--force', action="store_true", help='Force downloading again')
+        parser.set_defaults(force=False)
         self.args = parser.parse_args()
         
     def __call__(self):
         self.argparser()
         Database.load(self.args.destination)
         m=Medium(self.args.url)
-        m.download(self.args.destination)
+        m.download(self.args.destination, self.args.force)
         Database.close()
 
 if __name__ == "__main__":

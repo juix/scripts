@@ -32,19 +32,24 @@ class Main(object):
         #print "E39A8FE" in trash
         
     def _loadReferenced(self):
-	    TODO: alle links laden, nicht nur in der Verzeichnistiefe 1
+	    #TODO: alle links laden, nicht nur in der Verzeichnistiefe 1
         r=set()
-        for element in os.listdir(self.args.destination):
-            if not element.startswith("by-name"): continue
-            r.update(self._findLinks(os.path.join(self.args.destination,element)))
+        for root, dirs, files in os.walk(self.args.destination):
+            for f in files:
+                e=os.path.join(root,f)
+                l=self._resolveLink(e)
+                if l != None: r.add(l)
+        #for element in os.listdir(self.args.destination):
+            #if not element.startswith("by-name"): continue
+            #r.update(self._findLinks(os.path.join(self.args.destination,element)))
         return r
             
-    def _findLinks(self,path):
-        r=set()
-        for element in os.listdir(path):
-            l=self._resolveLink(os.path.join(path,element))
-            if l != None: r.add(l)
-        return r
+    #def _findLinks(self,path):
+    #    r=set()
+    #    for element in os.listdir(path):
+    #        l=self._resolveLink(os.path.join(path,element))
+    #        if l != None: r.add(l)
+    #    return r
         
     def _resolveLink(self,path):
         try:

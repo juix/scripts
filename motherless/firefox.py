@@ -19,7 +19,7 @@ class Loggable(object):
 class Main(Loggable):
     def argparser(self):
         parser = argparse.ArgumentParser(description="Downloads motherless media from Iceweasel's/Firefox' open tabs. URLs of downloaded motherless.com items are printed to stdout.")
-        parser.add_argument("-p", "--path", type=str, help='Path to ~/.mozilla/firefox/something/. First match of sessionstore.js if not specified.')
+        parser.add_argument("-p", "--path", type=str, help='Path to ~/.mozilla/firefox/something/sessionstore.js. First match of sessionstore.js if not specified.')
         parser.add_argument("-i", "--images-only", dest="images_only", action="store_true", default=False, help="Don't download videos")
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, defualt: ./')
         parser.add_argument("-s",'--sessionstore', action="store_true", default=False, help='Only remove downloaded tabs from sessionstore and quit')
@@ -48,9 +48,10 @@ class Main(Loggable):
             sstore.save()
         else:
             urls=sstore.getUrls()
-            for url in set(urls):
+            for i, url in enumerate(set(urls)):
                     if self.isValidUrl(url):
                         self._log("\tis valid motherless url")
+                        print "  ================>> %2.0f %%" % (100.0/len(urls)*i)
                         m=Medium(url)
                         if (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
                             self._downloadThread(m)
@@ -63,8 +64,8 @@ class Main(Loggable):
         for root, dirs, files in os.walk(os.path.expanduser("~/.mozilla/firefox/")):
             for file in files:
                 if file=="sessionstore.js":
-                    #return os.path.join(root, file)
-                    return root
+                    return os.path.join(root, file)
+                    #return root
         
     def isValidUrl(self,url):
         return ("motherless.com" in url and "/search" not in url \
@@ -104,7 +105,13 @@ class Main(Loggable):
 class Sessionstore(Loggable):
     def __init__(self,firefoxPath):
         self.firefoxPath=firefoxPath
-        self.sstorePath=os.path.join(firefoxPath,"sessionstore.js")
+        
+        # backwards compability in case "firefoxPath" is
+        # still given as a path to the firefox directory and not to the sessionstore.js
+        if os.path.isdir(firefoxPath): 
+            self.sstorePath=os.path.join(firefoxPath,"sessionstore.js")
+        else:
+            self.sstorePath=firefoxPath
         
     def getUrls(self):
         self._load()

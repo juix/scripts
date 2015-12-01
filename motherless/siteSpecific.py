@@ -4,6 +4,8 @@
 Authr: João Juíz
 '''
 import re
+from urlparse import urlparse
+
 
 class WebsiteChangedError(Exception): pass
 
@@ -60,7 +62,8 @@ class MotherlessSpecific(object):
     def getPicUrl(soup):
         links=soup.findAll("link",rel="image_src")
         if len(links)==0: raise WebsiteChangedError("no img found.")
-        return links[0].get("href")
+        href = links[0].get("href")
+        return href
         #fullimg = soup.findAll(id='thepic')
         #if len(fullimg)>0:
         #    return fullimg[0].src
