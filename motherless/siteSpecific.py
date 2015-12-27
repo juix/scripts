@@ -33,7 +33,9 @@ class MotherlessSpecific(object):
     @staticmethod
     def _getDiv(soup):
         div=soup.findAll(id='media-media')
+        div2=soup.findAll(id='full_image')
         if len(div)>0: return div[0]
+        elif len(div2)>0: return div2[0]
         else:
             raise WebsiteChangedError("No media found. Probably website code changed.")
             
@@ -56,7 +58,8 @@ class MotherlessSpecific(object):
         @return True, if this is an item. Otherwise this is a gallery
         """
         div=soup.findAll(id='media-media')
-        return (len(div)>0)
+        div2=soup.findAll(id='full_image')
+        return (len(div)+len(div2)>0)
 
     @staticmethod
     def getPicUrl(soup):

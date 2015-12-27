@@ -6,9 +6,10 @@ Authr: João Juíz
 Literature:
     http://ceriksen.com/2012/07/26/firefox-sessionstore-js-and-privacy/. 26/10/2013
 '''
-from medium import Medium
-from database import Database
 import argparse,json,os,sys,urllib2,subprocess
+from medium import Medium, NoLeafException
+from database import Database
+from confdir import Confdir
 
 class Loggable(object):
     def _log(self,text):
@@ -22,6 +23,7 @@ class Main(Loggable):
         parser.add_argument("-p", "--path", type=str, help='Path to ~/.mozilla/firefox/something/sessionstore.js. First match of sessionstore.js if not specified.')
         parser.add_argument("-i", "--images-only", dest="images_only", action="store_true", default=False, help="Don't download videos")
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, defualt: ./')
+        parser.add_argument("-c",'--confdir', type=str, default="~/.motherless-dl", help='Program config path, default: ~/.motherless-dl/')
         parser.add_argument("-s",'--sessionstore', action="store_true", default=False, help='Only remove downloaded tabs from sessionstore and quit')
         self.args = parser.parse_args()
 
@@ -33,6 +35,7 @@ class Main(Loggable):
         
     def __call__(self):
         self.argparser()
+        self.conf=Confdir(self.args.confdir)
         if not self.args.path:
             firefoxPath=self.getFirefoxPath()
             print >>sys.stderr, "Using sessionstore from %s."%firefoxPath
@@ -41,7 +44,7 @@ class Main(Loggable):
         if self.args.sessionstore and self.firefoxIsOpen() \
             and raw_input("Browser must be closed first. Continue anyway? [y/N]") != "y":
             exit(1)
-        Database.load(self.args.destination)
+        Database.load(self.conf)
         sstore=Sessionstore(firefoxPath)
         if self.args.sessionstore:
             sstore.filterStorage(lambda url:self.isValidUrl(url) and Medium(url).downloadFinished())
@@ -85,7 +88,8 @@ class Main(Loggable):
         @return True if this url is a media item (leaf) that has/had been downloaded
         """
         #m=Medium(url)
-        #if m.existsAtDestination(self.args.destination): return True
+        if (m.downloadFinished() or m.isBeingDownloaded()): return True
+        
         try:
             self._log("\tload medium")
             m._retrieveProperties()
@@ -96,7 +100,9 @@ class Main(Loggable):
         if m.isLeaf == False: return False
         
         if self.args.images_only == False or m.isPhoto:
-            m.download(self.args.destination)
+            try:
+                m.download(self.args.destination,self.conf)
+            except NoLeafException: return False
             #m.saveHtmlFile(self.args.destination)
             print m.websiteUrl
             return True

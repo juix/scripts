@@ -11,6 +11,7 @@ from framework import FileOperations, FW
 import argparse
 from medium import Medium
 from database import Database
+from confdir import Confdir
 
 class Main(object):
     def __init__(self):
@@ -20,20 +21,17 @@ class Main(object):
         parser = argparse.ArgumentParser(description='Sync motherless.com favourites to local directory')
         parser.add_argument("-u",'--username', type=str, required=True, help='Sync favourites of this user')
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, default: ./')
-        parser.add_argument("-l",'--recreate-links', dest="links", action="store_true", required=False, help='Create symlinks of already downloaded files')
-        parser.set_defaults(links=False)
+        parser.add_argument("-c",'--confdir', type=str, default="~/.motherless-dl", help='Program config path, default: ~/.motherless-dl/')
         self.args = parser.parse_args()
         
     def __call__(self):
         self.argparser()
-        Database.load(self.args.destination)
+        conf=Confdir(self.args.confdir)
+        Database.load(conf)
         f=Favs(self.args.username)
         mediumlist=[Medium(x) for x in f]
         for m in mediumlist:
-            m.download(self.args.destination)
-            if m.existsAtDestination(self.args.destination) and self.args.links:
-                FW.error("Recreate Symlink")
-                m.createSymlink(self.args.destination)
+            m.download(self.args.destination,conf)
         Database.close()
         
 class PageLoader(_Web):

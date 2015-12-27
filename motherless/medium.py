@@ -28,7 +28,8 @@ class MediumNoDB(_Web,FileOperations):
         else: self.id=self.safeFilename(path)
         
     def existsAtDestination(self,dest):
-        return os.path.exists(os.path.join(dest,"by-id",self.id))
+        raise Exception("MediumNoDB.existsAtDestination is deprecated!")
+        return os.path.exists(os.path.join(dest,self.filename))
         
     def _retrieveProperties(self):
         """
@@ -42,6 +43,7 @@ class MediumNoDB(_Web,FileOperations):
         self.relatedWebsite = RelatedWebsite(self.id)
         soup=Bsoup(self.websiteContent)
         self.isLeaf = Website.isLeaf(soup)
+        
         if not self.isLeaf: return
         self.isPhoto = Website.isPhoto(soup)
         if self.isPhoto: self.mediaUrl = Website.getPicUrl(soup)
@@ -61,23 +63,24 @@ class MediumNoDB(_Web,FileOperations):
     def isBeingDownloaded(self):
         return False
         
-    def download(self,destination):
+    def download(self,destination,confdir):
         # Kritischer Abschnitt Start
         self._retrieveProperties()
-        self.mkdirq(os.path.join(destination,"by-id"))
+        if not self.isLeaf: 
+            raise NoLeafException(self.websiteUrl)
+        filename = os.path.join(destination,self.filename)
         if self.isPhoto:
-            urllib.urlretrieve(self.mediaUrl, os.path.join(destination,"by-id",self.id))
+            urllib.urlretrieve(self.mediaUrl, filename)
         else:
             # is video
             print "\tvideo:", self.mediaUrl
-            subprocess.check_call(["/usr/bin/wget","-c","--user-agent=Mozilla 5.0","-O",os.path.join(destination,"by-id",self.id),self.mediaUrl])
+            subprocess.check_call(["/usr/bin/wget","-c","--user-agent=Mozilla 5.0","-O",filename,self.mediaUrl])
             # returncode == 0. download completed successfully
             #urllib.urlretrieve(self.mediaUrl, os.path.join(destination,"by-id",self.id))
             
             #ydl = YoutubeDL({'out})
             #ydl.download([self.websiteUrl])
-        self.createSymlink(destination)
-        self.saveHtmlFile(destination)
+        self.saveHtmlFile(str(confdir))
         # Kritischer Abschnitt Ende
         
     def saveHtmlFile(self,destination):
@@ -88,21 +91,6 @@ class MediumNoDB(_Web,FileOperations):
         with open(os.path.join(destination,"html",self.relatedWebsite.id),"w") as f:
             f.write(str(self.relatedWebsite))
         
-    def createSymlink(self,destination):
-        self._retrieveProperties()
-        self.mkdirq(os.path.join(destination,"by-name"))
-        #self.mkdirq(os.path.join(destination,"sorted.by-rating"))
-        idPath="../by-id/"
-        idPath=os.path.abspath(os.path.join(destination,"by-id")) # absolute filepath links
-        try:
-            os.symlink(os.path.join(idPath,self.id), os.path.join(destination,"by-name",self.filename))
-        except OSError: pass
-        try:
-            pass
-            #os.symlink(os.path.join("../by-id/",self.id), os.path.join(destination,"by-rating","%04d %s"%(self.numFaved,self.filename)))
-        except OSError: pass
-
-
 
 class Medium(MediumNoDB):
     """
@@ -112,12 +100,12 @@ class Medium(MediumNoDB):
     def __init__(self,websiteUrl):
         super(Medium,self).__init__(websiteUrl)
 
-    def download(self, dest, force=False):
-        if (not force) and (self.downloadFinished() or Database.isDownloading(self.id)): 
+    def download(self, dest, confdir, force=False):
+        if (not force) and (self.downloadFinished() or self.isBeingDownloaded()): 
             FW.error("%s already downloaded."%self.id)
             return
         Database.notify_startDownload(self.id)
-        super(Medium,self).download(dest)
+        super(Medium,self).download(dest, confdir)
         Database.notify_finishedDownload(self.id)
 
     def downloadFinished(self):
@@ -139,4 +127,9 @@ class RelatedWebsite(_Web):
             self.websiteContent = ""
         
     def __str__(self): return self.websiteContent
+    
+class NoLeafException(Exception):
+    def __init__(self, value): self.value=value
+    def __str__(self): return "Error: The element %s does not contain media."%self.value
+    
     

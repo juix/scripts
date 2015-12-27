@@ -6,6 +6,7 @@ Database for the motherless downloader. It stores the IDs of downloaded files, f
 '''
 import sqlite3,os
 from framework import Processes
+from confdir import Confdir
 
 class Database(object):
     """
@@ -13,11 +14,13 @@ class Database(object):
     """
     
     @classmethod
-    def load(self,path):
+    def load(self,confPath):
         """ Connect to database """
+        if type(confPath) is not Confdir: raise Exception("Database has to be loaded with an instance of Confdir instead of String!")
+        path = confPath.database
         if "path" in self.__dict__ and path==self.path: return
         self.path=path
-        filename=os.path.join(path,".ml.db")
+        filename=os.path.join(path)
         creating=not os.path.exists(filename)
         self.conn=sqlite3.connect(filename)
         self.c=self.conn.cursor()

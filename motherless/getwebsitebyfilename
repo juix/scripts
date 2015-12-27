@@ -2,6 +2,8 @@
 # usage: $0 ~/motherless-saves/by-name/something
 # output: http://motherless.com/origin
 
+echo Deprecated. Reimplement this file using the filename
+
 file="$1"
 #cd "`dirname "$file"`"
 id="$(basename "`readlink -m "$file"`")"
