@@ -1,0 +1,5 @@
+move destination/.ml.db to ~/.motherless-dl/ml.db
+move destination/html/ to ~/.motherless-dl/html
+now you can download and execute sync-favs, download-item and firefox.py from any directory!
+set custom user dir by argument -c
+
