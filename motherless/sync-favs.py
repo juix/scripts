@@ -19,7 +19,7 @@ class Main(object):
     def argparser(self):
         parser = argparse.ArgumentParser(description='Sync motherless.com favourites to local directory')
         parser.add_argument("-u",'--username', type=str, required=True, help='Sync favourites of this user')
-        parser.add_argument("-o",'--destination', type=str, required=True, help='Save files here')
+        parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, default: ./')
         parser.add_argument("-l",'--recreate-links', dest="links", action="store_true", required=False, help='Create symlinks of already downloaded files')
         parser.set_defaults(links=False)
         self.args = parser.parse_args()
@@ -34,22 +34,7 @@ class Main(object):
             if m.existsAtDestination(self.args.destination) and self.args.links:
                 FW.error("Recreate Symlink")
                 m.createSymlink(self.args.destination)
-            #else:
-            #    m()
-            #    m.saveHtmlFile(self.args.destination)
-        self._printDiffs(mediumlist)
         Database.close()
-        
-    def _printDiffs(self,mediumlist):
-        localDir=os.path.join(self.args.destination,"by-id")
-        server=set([x.id for x in mediumlist])
-        local=set([f for f in os.listdir(localDir) if os.path.isfile(os.path.join(localDir,f)) ])
-        diff=local.difference(server)
-        if len(diff) == 0: return
-        FW.error("")
-        FW.error("###################################################")
-        FW.error("Filenames which exist on your computer but not in your motherless favourites are printed to stdout.")
-        for x in diff: print x
         
 class PageLoader(_Web):
     """
@@ -58,7 +43,7 @@ class PageLoader(_Web):
     def __init__(self,username):
         self.user=username
         self.html=[]
-        self.url="http://motherless.com/f/%s/all"%self.user
+        self.url="http://motherless.com/f/%s/all"%self.user # TODO: move to SiteSpecific
 
     def __call__(self):        
         self.html.append(self.get(self.url))
@@ -69,7 +54,7 @@ class PageLoader(_Web):
         
     def getPages(self):
         #links=self.getLinks(self.html[0],href=self.filterForNextPageButton)
-        links=self.getLinks(self.html[0],attrs={'href':re.compile(".*page=.*")})
+        links=self.getLinks(self.html[0],attrs={'href':re.compile(".*page=.*")}) # TODO: move to SiteSpecific
         for link in links:
             self.getPage(urljoin(self.url,link))
         
@@ -88,7 +73,7 @@ class Favs(_Web,set):
         self.update(self.favs)
 
     def getMediaLinks(self,html):
-        self.favs.update(self.getLinks(html,attrs={"class":"img-container"}))
+        self.favs.update(self.getLinks(html,attrs={"class":"img-container"})) # TODO: move to SiteSpecific
         
 
 

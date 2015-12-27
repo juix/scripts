@@ -4,4 +4,12 @@ This scripts work with the website motherless.com.
 
 download-item.py downloads a single picture or video.
 sync-favs.py downloads a specific user's favourited pictures and videos.
+firefox.py downloads the media from open tabs in firefox
 
+
+TODO:
+    store database in ~/.motherless/db
+    store html in ~/.motherless/html
+    store partially downloaded files in ~/.motherless/downloading
+    save file as ./$filename - $id.xyz
+    

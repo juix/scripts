@@ -16,8 +16,6 @@ class MediumNoDB(_Web,FileOperations):
     """
     A favourised item.
     """
-    #def __new__(cls,url):
-        #soup=Bsoup(self.get(url))
         
     def __init__(self,websiteUrl):
         self.websiteUrl=websiteUrl

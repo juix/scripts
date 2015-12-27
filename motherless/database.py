@@ -14,6 +14,7 @@ class Database(object):
     
     @classmethod
     def load(self,path):
+        """ Connect to database """
         if "path" in self.__dict__ and path==self.path: return
         self.path=path
         filename=os.path.join(path,".ml.db")
