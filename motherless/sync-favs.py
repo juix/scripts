@@ -18,7 +18,7 @@ class Main(object):
         pass
     
     def argparser(self):
-        parser = argparse.ArgumentParser(description='Sync motherless.com favourites to local directory')
+        parser = argparse.ArgumentParser(description='Downloads your motherless.com favourites to a local directory. This only downloads the favourites added since the last execution of this program.')
         parser.add_argument("-u",'--username', type=str, required=True, help='Sync favourites of this user')
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, default: ./')
         parser.add_argument("-c",'--confdir', type=str, default="~/.motherless-dl", help='Program config path, default: ~/.motherless-dl/')

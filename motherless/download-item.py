@@ -26,7 +26,7 @@ class Main(object):
         
     def __call__(self):
         self.argparser()
-        self.conf=Confdir(self.args.confdir)
+        conf=Confdir(self.args.confdir)
         Database.load(conf)
         m=Medium(self.args.url)
         m.download(self.args.destination, conf, self.args.force)

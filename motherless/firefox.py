@@ -19,7 +19,7 @@ class Loggable(object):
 
 class Main(Loggable):
     def argparser(self):
-        parser = argparse.ArgumentParser(description="Downloads motherless media from Iceweasel's/Firefox' open tabs. URLs of downloaded motherless.com items are printed to stdout.")
+        parser = argparse.ArgumentParser(description="Downloads motherless media from Iceweasel's/Firefox' open tabs. URLs of downloaded motherless.com items are printed to stdout. Skips duplicates.")
         parser.add_argument("-p", "--path", type=str, help='Path to ~/.mozilla/firefox/something/sessionstore.js. First match of sessionstore.js if not specified.')
         parser.add_argument("-i", "--images-only", dest="images_only", action="store_true", default=False, help="Don't download videos")
         parser.add_argument("-o",'--destination', type=str, default=".", help='Save files here, defualt: ./')
