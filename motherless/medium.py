@@ -3,13 +3,14 @@
 '''
 Authr: João Juíz
 '''
-from webFunctions import _Web
-from siteSpecific import MotherlessSpecific as Website
-from framework import FileOperations,FW
 from BeautifulSoup import BeautifulSoup as Bsoup
 from urlparse import urlparse
 import urllib,os,re,urllib2
 import subprocess
+
+from webFunctions import _Web
+from siteSpecific import MotherlessSpecific as Website
+from framework import FileOperations,FW
 from database import Database
 
 class MediumNoDB(_Web,FileOperations):
@@ -69,17 +70,19 @@ class MediumNoDB(_Web,FileOperations):
         if not self.isLeaf: 
             raise NoLeafException(self.websiteUrl)
         filename = os.path.join(destination,self.filename)
+        filename_temp = filename+".part"
         if self.isPhoto:
-            urllib.urlretrieve(self.mediaUrl, filename)
+            urllib.urlretrieve(self.mediaUrl, filename_temp)
         else:
             # is video
             print "\tvideo:", self.mediaUrl
-            subprocess.check_call(["/usr/bin/wget","-c","--user-agent=Mozilla 5.0","-O",filename,self.mediaUrl])
+            subprocess.check_call(["/usr/bin/wget","-c","--user-agent=Mozilla 5.0","-O",filename_temp,self.mediaUrl])
             # returncode == 0. download completed successfully
             #urllib.urlretrieve(self.mediaUrl, os.path.join(destination,"by-id",self.id))
             
             #ydl = YoutubeDL({'out})
             #ydl.download([self.websiteUrl])
+        os.rename(filename_temp, filename)
         self.saveHtmlFile(str(confdir))
         # Kritischer Abschnitt Ende
         

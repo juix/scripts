@@ -54,11 +54,11 @@ class Main(Loggable):
             for i, url in enumerate(set(urls)):
                     if self.isValidUrl(url):
                         self._log("\tis valid motherless url")
-                        print "  ================>> %2.0f %%" % (100.0/len(urls)*i)
+                        sys.stdout.write("\r  ================>> %2.0f %%" % (100.0/len(urls)*i))
                         m=Medium(url)
                         if (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
                             self._downloadThread(m)
-                                     
+            sys.stdout.write("\n")
         Database.close()
         #print >> sys.stderr, len(self.urls)," Links"
         #for url in self.urls: self._download(url)
