@@ -55,6 +55,7 @@ class Main(Loggable):
                     if self.isValidUrl(url):
                         self._log("\tis valid motherless url")
                         sys.stdout.write("\r  ================>> %2.0f %%" % (100.0/len(urls)*i))
+                        sys.stdout.flush()
                         m=Medium(url)
                         if (not m.isBeingDownloaded()) and (not Database.hasUrl(url)):
                             self._downloadThread(m)
