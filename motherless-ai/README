@@ -1,0 +1,19 @@
+Machine learner to rate downloaded unseen motherless items
+
+See also motherless-dl!
+
+
+SETUP
+$ createdb motherless
+$ psql motherless < "createdb motherless.sql"
+
+Set your download paths in config.py. This is needed to check which items have been erased.
+
+
+USE
+Write classifications to table ratings, 0 is dislike, 1 is like:
+$ ./control.py -dmc
+
+View statistics:
+$ ./control.py -xr
+
