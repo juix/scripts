@@ -56,6 +56,7 @@ class Main(object):
                 msg = u"\n\t".join([u"%s (%0.3f)"%(name,score) for name,score in most])
                 sys.stderr.write((u"%s\n"%msg).encode("utf-8",errors="strict"))
 
+    
 Classifier = Main
     
 if __name__ == "__main__":

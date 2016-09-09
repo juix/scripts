@@ -51,3 +51,9 @@ CREATE TABLE predictions (
     cls int
 );
 
+CREATE TABLE file_system (
+    id varchar(10),
+    path varchar(1023),
+    fav bool
+);
+

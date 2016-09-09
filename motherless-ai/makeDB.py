@@ -24,7 +24,7 @@ class HTMLMixin(object):
         """ read all files from ~/.motherless-dl/html/$ID and write features to DB
         if $ID does not already exist. """
         print("Html to database")
-        ids = self.getAllStoredIds()
+        ids = self.getAllRetrievedIds()
         ids_todo = ids.difference(self.getAllDbIds())
         for i in ids_todo:
             sys.stderr.write("\t%s\n"%i)
@@ -130,31 +130,36 @@ class HTMLMixin(object):
         
 
 class IdsMixin(object):
+    """ Functions concerning file search """
 
     def getAllDbIds(self):
+        """ get all ids stored in DB """
         self.db.query("SELECT id FROM medium")
         return [r[0] for r in self.db.cursor.fetchall()]
 
     def writeIdsToDb(self):
         print("Updating likes/dislikes in DB")
         db = self.db
+        self.refreshStoredFiles()
 
-        all_ = self.getAllStoredIds()
+        all_ = self.getAllRetrievedIds()
         #for x in all_: db.query("INSERT INTO ids_all VALUES (%s)",(x,))
         #db.commit()
-        storedFiles = set(self.walkAll())
+        storedFiles = self.getStoredFiles()
+        storedIds = [i for i,f in storedFiles]
         self.db.query("DELETE FROM ids_dislikes")
         self.db.query("DELETE FROM ids_likes")
         
-        dislikes = all_.difference(self.pathToId(storedFiles))
+        dislikes = all_.difference(storedIds)
         for x in dislikes: db.query("INSERT INTO ids_dislikes VALUES (%s)",(x,))
-        likes = set(self.pathToId([x for x in storedFiles if self.isFav(x)]))
+        likes = set([i for i,f in storedFiles if self.isFav(f)])
         for x in likes: db.query("INSERT INTO ids_likes VALUES (%s)",(x,))
-        #testset = set(self.pathToId(storedFiles)).difference(likes)
-        print("\t%d files stored."%len(set(self.pathToId(storedFiles))))
+        #testset = set(storedIds).difference(likes)
+        print("\t%d files stored."%len(set(storedIds)))
         self.db.commit()
         
-    def getAllStoredIds(self):
+    def getAllRetrievedIds(self):
+        """ get all ids ever downloaded """
         return set([x for x in os.listdir(htmldir)
             if not x.startswith("H")])
 
@@ -162,25 +167,93 @@ class IdsMixin(object):
         root = os.path.dirname(path)
         return "favs" in root or "keep" in root
     
-    def pathToId(self, l):
-        for f in l:
+    def pathToId(self, f):
             r = re.findall(".*OTHERLESS\.COM\ \-\ ([^\.\-\ ]*)",f)
-            if len(r) == 0: continue # not a ml-file
+            if len(r) == 0: return None # not a ml-file
             if len(r[0]) > 7:
                 sys.stderr.write("%s, %s\n"%(r[0],f))
-            yield r[0]
+            return r[0]
     
     def walkAll(self):
+        """ return all file paths from motherless' config.downloadDirs """
         for d in config.downloadDirs:
             for f in self.walkDir(d):
                 yield f
     
     def walkDir(self, path):
+        """ return all potentially useful file paths from @path """
         for root, dirs, files in os.walk(path):
-            if "by-id" in root: continue
+            if "by-id" in root or os.path.basename(root) == "by-rating": continue
             for f in files: 
+                if f.startswith("_"): continue
                 yield os.path.join(root,f)
+                
+    def _getPredictedLikes(self):
+        self.db.query("SELECT id FROM predictions WHERE cls = 1")
+        likes = [r[0] for r in self.db.cursor.fetchall()]
+        return likes
         
+    def linkPredictedLikes(self):
+        """ link all as like predicted files to config.predictedLikesDir """
+        self._forallPredictedLikes(os.symlink)
+    
+    def _forallPredictedLikes(self, func):
+        """ call func(src, dest) for each file predicted as "like" """
+        destDir = config.predictedLikesDir
+        if not os.path.lexists(destDir): os.makedirs(destDir)
+        likes = self._getPredictedLikes()
+        stored = dict(self.getStoredFiles())
+        log = []
+        for i in likes:
+            f = stored[i]
+            dest = os.path.join(destDir,os.path.basename(f))
+            if os.path.lexists(dest): 
+                sys.stderr.write("WARNING: %s exists more than once.\n"%i)
+                continue
+            func(f,dest)
+            #print(f,dest)
+            log.append((f,dest))
+        import json
+        with open("/tmp/motherless-ai.log","w") as f:
+            json.dump(log,f)
+            
+    def mvPredictedLikes(self):
+        """ link all as like predicted files to config.predictedLikesDir """
+        self._forallPredictedLikes(os.rename)
+        
+    def getStoredFiles(self):
+        """ get list of (id,path) of all files stored on hd according to DB """
+        self.db.query("SELECT id, path FROM file_system")
+        return [(r[0],r[1]) for r in self.db.cursor.fetchall()]
+        
+    def refreshStoredFiles(self):
+        """ write all file paths in config.downloadDirs and their ids to DB """
+        self.db.query("DELETE FROM file_system")
+        for f in self.walkAll():
+            i = self.pathToId(f)
+            if i is None: continue
+            self.db.query("INSERT INTO file_system VALUES (%s,%s,%s)",(i,f,self.isFav(f)))
+        self.db.commit()
+        
+    def _del_eraseFiles(self):
+        """ erase files removed in config.predictedLikesDir """
+        linked = self._getPredictedLikes()
+        existing = set([self.pathToId(f) for f in self.walkDir(config.predictedLikesDir)]).difference([None])
+        removed = set(linked).difference(existing)
+        self.db.query("SELECT path FROM file_system WHERE id IN %s",(tuple(removed),))
+        removedPaths = [r[0] for r in self.db.cursor.fetchall()]
+        sys.stderr.write("Links to these files have been removed:\n\n")
+        for f in removedPaths: print(f)
+        for i in removed:
+            for by_id_path in config.byIdPaths:
+                path = os.path.join(by_id_path,i)
+                if os.path.exists(path): print(path)
+        
+    def checkEmptyLikesDir(self):
+        pld = config.predictedLikesDir
+        if os.path.exists(pld) and len(os.listdir(pld)) > 0:
+            raise Exception("ERROR: %s is not empty!"%pld)
+        return True
         
 class Main(IdsMixin,HTMLMixin):
 

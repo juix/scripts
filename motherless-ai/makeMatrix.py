@@ -26,10 +26,10 @@ feature_selection.univariate_selection.safe_sparse_dot = mySafe_sparse_dot
 class Main(object):
     nominalFeatures=["uploaderlink"]
     stringFeatures=["uploaderlink"]
-    modus = "classify"
     normalise=True
     encodeNominalFeatures=True
     KBEST = 1500
+    max_features_also_favourited = 10e3
 
     def __init__(self):
         self.db = ExtendedDB(commitOnClose=False)
@@ -45,6 +45,22 @@ class Main(object):
         self.db.query("""
             DROP TABLE IF EXISTS temp_features
         """)
+        self.db.query("""
+            CREATE TEMP TABLE temp_also_favourited AS (
+                SELECT a.id, a.id_also
+                FROM also_favourited AS a
+                INNER JOIN
+                (
+                    SELECT id_also, count(id_also)
+                    FROM also_favourited
+                    GROUP BY id_also 
+                    --HAVING count(id_also) > 2
+                    ORDER BY count(id_also) DESC
+                    LIMIT %s
+                ) AS b
+                ON a.id_also = b.id_also
+            )
+        """,(self.max_features_also_favourited,))
         self.db.query("""
             CREATE TABLE temp_features AS(
                 SELECT 
@@ -141,7 +157,7 @@ class Main(object):
 
         # list-features to binary
         for table,select in [("tags","link"),("groups","link"),
-                #("also_favourited","id_also")
+                ("temp_also_favourited","id_also")
             ]:
             sys.stdout.write("\t%s... "%table)
             sys.stdout.flush()
@@ -184,6 +200,7 @@ class Main(object):
         return (X_train, y_train, X_eval, ids_eval, columns)
 
     def fvTrimmed(self, X, y):
+        """ select k best features """
         sys.stdout.write("Feature selection... ")
         sys.stdout.flush()
         skb = feature_selection.SelectKBest(feature_selection.chi2, k=self.KBEST)
@@ -206,6 +223,7 @@ class Main(object):
         np.savez("matrix.npz",X=X,y=y,X_eval=X_eval,ids=ids,cols=cols)
 
     def loadFromFile(self):
+        """ load matrix from file """
         sys.stdout.write("loading file ")
         npz = np.load("matrix.npz")
         sys.stdout.write("(%s)\n"%npz["X"].dtype)
